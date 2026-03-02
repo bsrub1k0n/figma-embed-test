@@ -5,18 +5,20 @@
   <title>Figma Embed API Test</title>
   <style>
     body { font-family: sans-serif; padding: 1rem; }
-    #log { background: #1e1e1e; color: #0f0; padding: 1rem; max-height: 300px; overflow-y: auto; font-size: 12px; }
+    #log { background: #1e1e1e; color: #0f0; padding: 1rem; max-height: 400px; overflow-y: auto; font-size: 12px; white-space: pre-wrap; }
     .controls { margin: 1rem 0; }
     button { margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; }
+    #auto-status { color: #ff0; margin: 1rem 0; }
   </style>
 </head>
 <body>
   <h1>Figma Embed API Test</h1>
+  <div id="auto-status"></div>
   <div class="controls">
     <button id="restart">RESTART</button>
     <button id="prev">NAVIGATE_BACKWARD</button>
     <button id="next">NAVIGATE_FORWARD</button>
-    <button id="send-custom">Send custom msg</button>
+    <button id="run-auto">Run auto-test</button>
   </div>
   <iframe
     id="figma-embed"
@@ -34,6 +36,7 @@
       el.textContent = new Date().toISOString().slice(11,19) + ' ' + msg + '\n' + el.textContent;
     };
     const iframe = document.getElementById('figma-embed');
+    let initialLoadDone = false;
 
     function sendMsg(obj) {
       iframe.contentWindow?.postMessage(obj, FIGMA_ORIGIN);
@@ -41,21 +44,50 @@
     }
 
     window.addEventListener('message', (e) => {
-      if (e.origin !== FIGMA_ORIGIN) return; // ignoriši MetaMask, druge ekstenzije
+      if (e.origin !== FIGMA_ORIGIN) return;
       log('RECV: ' + JSON.stringify(e.data));
+      if (e.data === 'INITIAL_LOAD' || (e.data && e.data.type === 'INITIAL_LOAD')) initialLoadDone = true;
     });
 
-    iframe.onload = () => {
-      log('Embed loaded, waiting for INITIAL_LOAD...');
-    };
+    iframe.onload = () => log('Embed loaded, waiting for INITIAL_LOAD...');
+
+    const AUTO_MESSAGES = [
+      { type: 'GET_FILE' },
+      { type: 'GET_FILE', data: {} },
+      { type: 'EXPORT' },
+      { type: 'READ_DEV_RESOURCES' },
+      { type: 'GET_FILE_CONTENT' },
+      { type: 'GET_NODES', data: { ids: ['0:1'] } },
+      { type: 'EXPORT_IMAGES' },
+      { type: 'figma/getFile' },
+      { type: 'FILE_READ' },
+      { type: 'NAVIGATE_TO_FRAME_AND_CLOSE_OVERLAYS', data: { nodeId: '0:1' } },
+      { type: 'CHANGE_COMPONENT_STATE', data: { nodeId: '0:1', newVariantId: '0:2' } },
+      { type: '__proto__', data: {} },
+      { type: 'constructor', data: {} },
+    ];
+
+    async function runAutoTest() {
+      const status = document.getElementById('auto-status');
+      if (!initialLoadDone) {
+        status.textContent = 'Čekam INITIAL_LOAD...';
+        await new Promise(r => {
+          const check = () => { if (initialLoadDone) r(); else setTimeout(check, 200); };
+          check();
+        });
+      }
+      status.textContent = 'Auto-test u toku...';
+      for (const msg of AUTO_MESSAGES) {
+        sendMsg(msg);
+        await new Promise(r => setTimeout(r, 800));
+      }
+      status.textContent = 'Auto-test završen. Proveri log.';
+    }
 
     document.getElementById('restart').onclick = () => sendMsg({ type: 'RESTART' });
     document.getElementById('prev').onclick = () => sendMsg({ type: 'NAVIGATE_BACKWARD' });
     document.getElementById('next').onclick = () => sendMsg({ type: 'NAVIGATE_FORWARD' });
-    document.getElementById('send-custom').onclick = () => {
-      const msg = prompt('Custom message JSON:', '{"type":"GET_FILE","data":{}}');
-      if (msg) try { sendMsg(JSON.parse(msg)); } catch (x) { log('Parse error: ' + x); }
-    };
+    document.getElementById('run-auto').onclick = () => runAutoTest();
   </script>
 </body>
 </html>
