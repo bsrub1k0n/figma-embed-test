@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Figma Embed API Test</title>
+</head>
+<body>
+  <h1>Figma Embed Test</h1>
+  <p>Zameni FILE_KEY i FILE_NODE_ID u URL-u ispod.</p>
+  <iframe
+    id="figma-embed"
+    src="https://www.figma.com/embed?embed_host=origin&client_id=aQtnIhfefTOCt40VkMu1tB&url=https://www.figma.com/file/fh3VT5rVqeaJA9BNAKcdLD"
+    width="800"
+    height="600"
+    allowfullscreen
+  ></iframe>
+  <pre id="log"></pre>
+  <script>
+    const log = (msg) => {
+      document.getElementById('log').textContent += msg + '\n';
+    };
+    const iframe = document.getElementById('figma-embed');
+    window.addEventListener('message', (e) => {
+      log('RECV: ' + JSON.stringify(e.data));
+    });
+    iframe.onload = () => {
+      log('Embed loaded');
+      // postMessage testovi - prilagodi po Figma Embed API docs
+      iframe.contentWindow?.postMessage({ type: 'getFile' }, '*');
+    };
+  </script>
+</body>
+</html>
