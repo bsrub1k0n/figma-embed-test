@@ -20,9 +20,9 @@
     <button id="next">NAVIGATE_FORWARD</button>
     <button id="run-auto">Run auto-test</button>
   </div>
+  <p>Test private file: <code>?file=TU_PRIVATE_FILE_KEY</code></p>
   <iframe
     id="figma-embed"
-    src="https://www.figma.com/embed?embed_host=origin&client_id=aQtnIhfefTOCt40VkMu1tB&url=https://www.figma.com/file/fh3VT5rVqeaJA9BNAKcdLD"
     width="800"
     height="600"
     allowfullscreen
@@ -31,11 +31,14 @@
   <pre id="log"></pre>
   <script>
     const FIGMA_ORIGIN = 'https://www.figma.com';
+    const params = new URLSearchParams(location.search);
+    const fileKey = params.get('file') || 'fh3VT5rVqeaJA9BNAKcdLD';
+    const iframe = document.getElementById('figma-embed');
+    iframe.src = `https://www.figma.com/embed?embed_host=origin&client_id=aQtnIhfefTOCt40VkMu1tB&url=https://www.figma.com/file/${fileKey}`;
     const log = (msg) => {
       const el = document.getElementById('log');
       el.textContent = new Date().toISOString().slice(11,19) + ' ' + msg + '\n' + el.textContent;
     };
-    const iframe = document.getElementById('figma-embed');
     let initialLoadDone = false;
 
     function sendMsg(obj) {
