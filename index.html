@@ -1,43 +1,57 @@
 <!DOCTYPE html>
-<html>
+<html lang="sr">
 <head>
   <meta charset="utf-8">
-  <title>Figma Embed API Test</title>
+  <title>Figma Embed – Bug Bounty Test</title>
   <style>
-    body { font-family: sans-serif; padding: 1rem; }
-    #log { background: #1e1e1e; color: #0f0; padding: 1rem; max-height: 400px; overflow-y: auto; font-size: 12px; white-space: pre-wrap; }
-    .controls { margin: 1rem 0; }
-    button { margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; }
-    #auto-status { color: #ff0; margin: 1rem 0; }
+    body { font-family: system-ui, sans-serif; padding: 1rem; max-width: 900px; }
+    #log { background: #1a1a1a; color: #0f0; padding: 1rem; max-height: 350px; overflow-y: auto; font-size: 12px; white-space: pre-wrap; border-radius: 4px; }
+    .controls { margin: 1rem 0; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    button { padding: 0.5rem 1rem; cursor: pointer; border: 1px solid #333; border-radius: 4px; background: #222; color: #fff; }
+    button:hover { background: #333; }
+    #auto-status { color: #ff0; margin: 0.5rem 0; }
+    .info { background: #f5f5f5; padding: 0.75rem; border-radius: 4px; margin: 1rem 0; font-size: 13px; }
+    .info code { background: #e0e0e0; padding: 0.1em 0.3em; border-radius: 2px; }
   </style>
 </head>
 <body>
-  <h1>Figma Embed API Test</h1>
-  <div id="auto-status"></div>
+  <h1>Figma Embed – Bug Bounty Test</h1>
+
+  <div class="info">
+    <strong>Novi nalog setup:</strong><br>
+    File: <code>r7Md2CS5QvF3TSnMeiAI9R</code> (Historica-Essentials)<br>
+    Client ID: <code>aQtnIhfefTOCt40VkMu1tB</code><br>
+    Allowed origin: <code>https://bsrub1k0n.github.io</code>
+  </div>
+
   <div class="controls">
     <button id="restart">RESTART</button>
-    <button id="prev">NAVIGATE_BACKWARD</button>
-    <button id="next">NAVIGATE_FORWARD</button>
+    <button id="prev">← BACK</button>
+    <button id="next">FORWARD →</button>
     <button id="run-auto">Run auto-test</button>
   </div>
-  <p>Test private file: <code>?file=TU_PRIVATE_FILE_KEY</code></p>
-  <iframe
-    id="figma-embed"
-    width="800"
-    height="600"
-    allowfullscreen
-  ></iframe>
-  <h3>Events from Figma:</h3>
+  <div id="auto-status"></div>
+
+  <p><strong>URL params:</strong> <code>?file=FILE_KEY</code> <code>?mode=design|proto</code></p>
+  <p>Proto: Embed API poruke (NAVIGATE, RESTART) rade. Design: samo prikaz.</p>
+
+  <iframe id="figma-embed" width="800" height="600" allowfullscreen></iframe>
+
+  <h3>Events (SENT + RECV):</h3>
   <pre id="log"></pre>
+
   <script>
     const FIGMA_ORIGIN = 'https://www.figma.com';
     const params = new URLSearchParams(location.search);
-    const fileKey = params.get('file') || 'fh3VT5rVqeaJA9BNAKcdLD';
+    const fileKey = params.get('file') || 'r7Md2CS5QvF3TSnMeiAI9R';
+    const mode = params.get('mode') || 'design';
     const iframe = document.getElementById('figma-embed');
-    iframe.src = `https://www.figma.com/embed?embed_host=origin&client_id=aQtnIhfefTOCt40VkMu1tB&url=https://www.figma.com/file/${fileKey}`;
+
+    iframe.src = `https://embed.figma.com/${mode}/${fileKey}?embed-host=bsrub1k0n-github-io&client_id=aQtnIhfefTOCt40VkMu1tB`;
+
     const log = (msg) => {
       const el = document.getElementById('log');
-      el.textContent = new Date().toISOString().slice(11,19) + ' ' + msg + '\n' + el.textContent;
+      el.textContent = new Date().toISOString().slice(11, 19) + ' ' + msg + '\n' + el.textContent;
     };
     let initialLoadDone = false;
 
@@ -52,29 +66,21 @@
       if (e.data === 'INITIAL_LOAD' || (e.data && e.data.type === 'INITIAL_LOAD')) initialLoadDone = true;
     });
 
-    iframe.onload = () => log('Embed loaded, waiting for INITIAL_LOAD...');
+    iframe.onload = () => log('Embed loaded, čekam INITIAL_LOAD...');
 
     const AUTO_MESSAGES = [
-      { type: 'GET_FILE' },
-      { type: 'GET_FILE', data: {} },
-      { type: 'EXPORT' },
-      { type: 'READ_DEV_RESOURCES' },
-      { type: 'GET_FILE_CONTENT' },
-      { type: 'GET_NODES', data: { ids: ['0:1'] } },
-      { type: 'EXPORT_IMAGES' },
-      { type: 'figma/getFile' },
-      { type: 'FILE_READ' },
+      { type: 'RESTART' },
+      { type: 'NAVIGATE_FORWARD' },
+      { type: 'NAVIGATE_BACKWARD' },
       { type: 'NAVIGATE_TO_FRAME_AND_CLOSE_OVERLAYS', data: { nodeId: '0:1' } },
       { type: 'CHANGE_COMPONENT_STATE', data: { nodeId: '0:1', newVariantId: '0:2' } },
-      { type: '__proto__', data: {} },
-      { type: 'constructor', data: {} },
     ];
 
     async function runAutoTest() {
       const status = document.getElementById('auto-status');
       if (!initialLoadDone) {
         status.textContent = 'Čekam INITIAL_LOAD (max 15s)...';
-        await new Promise(r => setTimeout(r, 15000)); // max wait
+        await new Promise(r => setTimeout(r, 15000));
       }
       status.textContent = 'Auto-test u toku...';
       for (const msg of AUTO_MESSAGES) {
@@ -87,7 +93,7 @@
     document.getElementById('restart').onclick = () => sendMsg({ type: 'RESTART' });
     document.getElementById('prev').onclick = () => sendMsg({ type: 'NAVIGATE_BACKWARD' });
     document.getElementById('next').onclick = () => sendMsg({ type: 'NAVIGATE_FORWARD' });
-    document.getElementById('run-auto').onclick = () => runAutoTest();
+    document.getElementById('run-auto').onclick = runAutoTest;
   </script>
 </body>
 </html>
