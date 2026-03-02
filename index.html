@@ -70,11 +70,8 @@
     async function runAutoTest() {
       const status = document.getElementById('auto-status');
       if (!initialLoadDone) {
-        status.textContent = 'Čekam INITIAL_LOAD...';
-        await new Promise(r => {
-          const check = () => { if (initialLoadDone) r(); else setTimeout(check, 200); };
-          check();
-        });
+        status.textContent = 'Čekam INITIAL_LOAD (max 15s)...';
+        await new Promise(r => setTimeout(r, 15000)); // max wait
       }
       status.textContent = 'Auto-test u toku...';
       for (const msg of AUTO_MESSAGES) {
