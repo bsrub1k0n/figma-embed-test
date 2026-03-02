@@ -3,10 +3,21 @@
 <head>
   <meta charset="utf-8">
   <title>Figma Embed API Test</title>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; }
+    #log { background: #1e1e1e; color: #0f0; padding: 1rem; max-height: 300px; overflow-y: auto; font-size: 12px; }
+    .controls { margin: 1rem 0; }
+    button { margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; }
+  </style>
 </head>
 <body>
-  <h1>Figma Embed Test</h1>
-  <p>Zameni FILE_KEY i FILE_NODE_ID u URL-u ispod.</p>
+  <h1>Figma Embed API Test</h1>
+  <div class="controls">
+    <button id="restart">RESTART</button>
+    <button id="prev">NAVIGATE_BACKWARD</button>
+    <button id="next">NAVIGATE_FORWARD</button>
+    <button id="send-custom">Send custom msg</button>
+  </div>
   <iframe
     id="figma-embed"
     src="https://www.figma.com/embed?embed_host=origin&client_id=aQtnIhfefTOCt40VkMu1tB&url=https://www.figma.com/file/fh3VT5rVqeaJA9BNAKcdLD"
@@ -14,19 +25,36 @@
     height="600"
     allowfullscreen
   ></iframe>
+  <h3>Events from Figma:</h3>
   <pre id="log"></pre>
   <script>
+    const FIGMA_ORIGIN = 'https://www.figma.com';
     const log = (msg) => {
-      document.getElementById('log').textContent += msg + '\n';
+      const el = document.getElementById('log');
+      el.textContent = new Date().toISOString().slice(11,19) + ' ' + msg + '\n' + el.textContent;
     };
     const iframe = document.getElementById('figma-embed');
+
+    function sendMsg(obj) {
+      iframe.contentWindow?.postMessage(obj, FIGMA_ORIGIN);
+      log('SENT: ' + JSON.stringify(obj));
+    }
+
     window.addEventListener('message', (e) => {
+      if (e.origin !== FIGMA_ORIGIN) return; // ignoriši MetaMask, druge ekstenzije
       log('RECV: ' + JSON.stringify(e.data));
     });
+
     iframe.onload = () => {
-      log('Embed loaded');
-      // postMessage testovi - prilagodi po Figma Embed API docs
-      iframe.contentWindow?.postMessage({ type: 'getFile' }, '*');
+      log('Embed loaded, waiting for INITIAL_LOAD...');
+    };
+
+    document.getElementById('restart').onclick = () => sendMsg({ type: 'RESTART' });
+    document.getElementById('prev').onclick = () => sendMsg({ type: 'NAVIGATE_BACKWARD' });
+    document.getElementById('next').onclick = () => sendMsg({ type: 'NAVIGATE_FORWARD' });
+    document.getElementById('send-custom').onclick = () => {
+      const msg = prompt('Custom message JSON:', '{"type":"GET_FILE","data":{}}');
+      if (msg) try { sendMsg(JSON.parse(msg)); } catch (x) { log('Parse error: ' + x); }
     };
   </script>
 </body>
